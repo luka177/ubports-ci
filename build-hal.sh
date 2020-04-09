@@ -2,13 +2,12 @@
 source halium.env
 cd $ANDROID_ROOT
 
-# replace something
-sed -i 's/external\/selinux/external\/selinux external\/libcurl/g' build/core/main.mk
+# Halium 9 specific
+./hybris-patches/apply-patches.sh
 
 source build/envsetup.sh
 export USE_CCACHE=1
 breakfast $DEVICE
-make -j$(nproc) hybris-hal
 make -j$(nproc) halium-boot
 make -j$(nproc) systemimage 
 
