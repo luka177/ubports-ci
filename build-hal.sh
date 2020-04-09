@@ -2,16 +2,20 @@
 source halium.env
 cd $ANDROID_ROOT
 
-# replace something
-sed -i 's/external\/selinux/external\/selinux external\/libcurl/g' build/core/main.mk
+# Halium 9 specific
+./hybris-patches/apply-patches.sh
+
+# Clean up disk space
+df -h
+rm -rf .repo
+df -h
 
 source build/envsetup.sh
 export USE_CCACHE=1
 breakfast $DEVICE
-make -j$(nproc) hybris-hal
 make -j$(nproc) halium-boot
-make -j$(nproc) systemimage 
+#make -j$(nproc) systemimage
 
-echo "md5sum halium-boot.img and system.img"
+echo "md5sum halium-boot.img"
 md5sum $ANDROID_ROOT/out/target/product/${DEVICE}/halium-boot.img
-md5sum $ANDROID_ROOT/out/target/product/${DEVICE}/system.img
+#md5sum $ANDROID_ROOT/out/target/product/${DEVICE}/system.img
