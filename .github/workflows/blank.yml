@@ -1,0 +1,78 @@
+#=================================================
+# Description: Build ubports using GitHub Actions
+# Lisence: MIT
+# Author: 0312birdzhang
+# Credit: https://github.com/P3TERX/Actions-OpenWrt
+#=================================================
+
+name: Build Ubports
+
+on: 
+  release:
+    types: [published]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-16.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+    
+    - name: Initialization environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+        openjdk-8-jdk android-tools-adb bc \
+        bison build-essential curl flex g++-multilib \
+        gcc-multilib gnupg gperf imagemagick lib32ncurses5-dev \
+        lib32readline-dev lib32z1-dev libesd0-dev liblz4-tool \
+        libncurses5-dev libsdl1.2-dev libssl-dev libwxgtk3.0-dev \
+        libxml2 libxml2-utils lzop pngcrush rsync schedtool \
+        squashfs-tools xsltproc yasm zip zlib1g-dev git
+        sudo docker rmi `docker images -q`
+        sudo rm -rf \
+          /usr/share/dotnet \
+          /etc/mysql \
+          /etc/php
+        mkdir -p ~/bin
+        wget 'https://storage.googleapis.com/git-repo-downloads/repo' -P ~/bin
+        chmod +x ~/bin/repo
+        git config --global user.name "TheKit"
+        git config --global user.email "thekit@disroot.org"
+        source halium.env
+        echo "::set-env name=VENDOR::$(echo $VENDOR)"
+        echo "::set-env name=DEVICE::$(echo $DEVICE)"
+        echo "::set-env name=ANDROID_ROOT::$(echo $ANDROID_ROOT)"
+    - name: Downloading source code
+      run: |
+        source halium.env
+        mkdir -p $ANDROID_ROOT
+        cd $ANDROID_ROOT
+        repo init -u https://github.com/Halium/android -b halium-9.0 --depth=1
+        repo sync -j8 -c --no-clone-bundle --no-tags
+    
+    - name: Clone device spec source
+      run: |
+        source halium.env
+        git clone https://github.com/ubports-on-fxtec-pro1/android_device_fxtec_pro1.git $ANDROID_ROOT/device/fxtec/pro1 --depth=1
+        git clone https://github.com/ubports-on-fxtec-pro1/android_device_idealte_msm8998-common.git $ANDROID_ROOT/device/idealte/msm8998-common --depth=1
+        git clone https://github.com/ubports-on-fxtec-pro1/proprietary_vendor_idealte.git $ANDROID_ROOT/vendor/idealte --depth=1
+        git clone https://github.com/ubports-on-fxtec-pro1/android_kernel_idealte_msm8998 $ANDROID_ROOT/kernel/idealte/msm8953 --depth=1
+    - name: Build HAL
+      run: |
+        chmod +x build-hal.sh
+        bash -x build-hal.sh
+      shell: bash
+
+    - name : Upload boot image
+      uses: actions/upload-artifact@master
+      with:
+        name: halium-boot image
+        path: ${{env.ANDROID_ROOT}}/out/target/product/${{env.DEVICE}}/halium-boot.img
+
+    - name : Upload system image
+      uses: actions/upload-artifact@master
+      with:
+        name: System image
+        path: ${{env.ANDROID_ROOT}}/out/target/product/${{env.DEVICE}}/system.img
